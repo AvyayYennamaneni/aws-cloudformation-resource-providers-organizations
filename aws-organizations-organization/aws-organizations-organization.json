@@ -1,137 +1,94 @@
 {
   "typeName": "AWS::Organizations::Organization",
-  "description": "An example resource schema demonstrating some basic constructs and validation rules.",
-  "sourceUrl": "https://github.com/aws-cloudformation/aws-cloudformation-rpdk.git",
-  "definitions": {
-    "InitechDateFormat": {
-      "$comment": "Use the `definitions` block to provide shared resource property schemas",
-      "type": "string",
-      "format": "date-time"
-    },
-    "Memo": {
-      "type": "object",
-      "properties": {
-        "Heading": {
-          "type": "string"
-        },
-        "Body": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "Tag": {
-      "description": "A key-value pair to associate with a resource.",
-      "type": "object",
-      "properties": {
-        "Key": {
-          "type": "string",
-          "description": "The key name of the tag. You can specify a value that is 1 to 128 Unicode characters in length and cannot be prefixed with aws:. You can use any of the following characters: the set of Unicode letters, digits, whitespace, _, ., /, =, +, and -.",
-          "minLength": 1,
-          "maxLength": 128
-        },
-        "Value": {
-          "type": "string",
-          "description": "The value for the tag. You can specify a value that is 0 to 256 Unicode characters in length and cannot be prefixed with aws:. You can use any of the following characters: the set of Unicode letters, digits, whitespace, _, ., /, =, +, and -.",
-          "minLength": 0,
-          "maxLength": 256
-        }
-      },
-      "required": [
-        "Key",
-        "Value"
-      ],
-      "additionalProperties": false
-    }
-  },
+  "description": "Resource schema for AWS::Organizations::Organization",
+  "sourceUrl": "https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-organizations.git",
   "properties": {
-    "TPSCode": {
-      "description": "A TPS Code is automatically generated on creation and assigned as the unique identifier.",
+    "Id": {
+      "description": "The unique identifier (ID) of an organization.",
       "type": "string",
-      "pattern": "^[A-Z]{3,5}[0-9]{8}-[0-9]{4}$"
+      "pattern": "^o-[a-z0-9]{10,32}$"
     },
-    "Title": {
-      "description": "The title of the TPS report is a mandatory element.",
+    "Arn": {
+      "description": "The Amazon Resource Name (ARN) of an organization.",
       "type": "string",
-      "minLength": 20,
-      "maxLength": 250
+      "pattern": "^arn:aws.*:organizations::\\d{12}:organization\\/o-[a-z0-9]{10,32}"
     },
-    "CoverSheetIncluded": {
-      "description": "Required for all TPS Reports submitted after 2/19/1999",
-      "type": "boolean"
-    },
-    "DueDate": {
-      "$ref": "#/definitions/InitechDateFormat"
-    },
-    "ApprovalDate": {
-      "$ref": "#/definitions/InitechDateFormat"
-    },
-    "Memo": {
-      "$ref": "#/definitions/Memo"
-    },
-    "SecondCopyOfMemo": {
-      "description": "In case you didn't get the first one.",
-      "$ref": "#/definitions/Memo"
-    },
-    "TestCode": {
+    "FeatureSet": {
+      "description": "Specifies the feature set supported by the new organization. Each feature set supports different levels of functionality.",
       "type": "string",
       "enum": [
-        "NOT_STARTED",
-        "CANCELLED"
-      ]
+        "ALL",
+        "CONSOLIDATED_BILLING"
+      ],
+      "default": "ALL"
     },
-    "Authors": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
+    "ManagementAccountArn": {
+      "description": "The Amazon Resource Name (ARN) of the account that is designated as the management account for the organization.",
+      "type": "string",
+      "pattern": "^arn:aws.*:organizations::\\d{12}:account\\/o-[a-z0-9]{10,32}\\/\\d{12}"
     },
-    "Tags": {
-      "description": "An array of key-value pairs to apply to this resource.",
-      "type": "array",
-      "uniqueItems": true,
-      "insertionOrder": false,
-      "items": {
-        "$ref": "#/definitions/Tag"
-      }
+    "ManagementAccountId": {
+      "description": "The unique identifier (ID) of the management account of an organization.",
+      "type": "string",
+      "pattern": "^\\d{12}$"
+    },
+    "ManagementAccountEmail": {
+      "description": "The email address that is associated with the AWS account that is designated as the management account for the organization.",
+      "type": "string",
+      "pattern": "[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
+      "minLength": 6,
+      "maxLength": 64
+    },
+    "RootId": {
+      "description": "The unique identifier (ID) for the root.",
+      "type": "string",
+      "pattern": "^r-[0-9a-z]{4,32}$",
+      "maxLength": 64
     }
   },
-  "additionalProperties": false,
-  "required": [
-    "TestCode",
-    "Title"
-  ],
-  "readOnlyProperties": [
-    "/properties/TPSCode"
-  ],
-  "primaryIdentifier": [
-    "/properties/TPSCode"
-  ],
+  "tagging": {
+    "taggable": false
+  },
   "handlers": {
     "create": {
       "permissions": [
-        "initech:CreateReport"
+        "organizations:CreateOrganization",
+        "organizations:DescribeOrganization",
+        "iam:CreateServiceLinkedRole",
+        "organizations:ListRoots"
       ]
     },
     "read": {
       "permissions": [
-        "initech:DescribeReport"
-      ]
-    },
-    "update": {
-      "permissions": [
-        "initech:UpdateReport"
+        "organizations:DescribeOrganization",
+        "organizations:ListRoots"
       ]
     },
     "delete": {
       "permissions": [
-        "initech:DeleteReport"
+        "organizations:DeleteOrganization",
+        "organizations:DescribeOrganization"
       ]
     },
     "list": {
       "permissions": [
-        "initech:ListReports"
+        "organizations:DescribeOrganization"
       ]
     }
-  }
+  },
+  "createOnlyProperties": [
+    "/properties/FeatureSet"
+  ],
+  "readOnlyProperties": [
+    "/properties/Id",
+    "/properties/Arn",
+    "/properties/ManagementAccountArn",
+    "/properties/ManagementAccountId",
+    "/properties/ManagementAccountEmail",
+    "/properties/RootId"
+  ],
+  "primaryIdentifier": [
+    "/properties/Id"
+  ],
+  "additionalProperties": false
 }

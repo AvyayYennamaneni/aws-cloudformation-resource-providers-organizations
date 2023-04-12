@@ -1,43 +1,70 @@
 package software.amazon.organizations.organization;
 
-import software.amazon.awssdk.awscore.AwsRequest;
-import software.amazon.awssdk.awscore.AwsResponse;
-import software.amazon.cloudformation.proxy.AmazonWebServicesClientProxy;
-import software.amazon.cloudformation.proxy.Logger;
+import software.amazon.awssdk.services.organizations.OrganizationsClient;
+import software.amazon.awssdk.services.organizations.model.AwsOrganizationsNotInUseException;
+import software.amazon.awssdk.services.organizations.model.DescribeOrganizationRequest;
+import software.amazon.awssdk.services.organizations.model.DescribeOrganizationResponse;
+import software.amazon.cloudformation.proxy.ResourceHandlerRequest;
 import software.amazon.cloudformation.proxy.ProgressEvent;
 import software.amazon.cloudformation.proxy.OperationStatus;
-import software.amazon.cloudformation.proxy.ResourceHandlerRequest;
+import software.amazon.cloudformation.proxy.AmazonWebServicesClientProxy;
+import software.amazon.cloudformation.proxy.HandlerErrorCode;
+import software.amazon.cloudformation.proxy.ProxyClient;
+import software.amazon.organizations.utils.OrgsLoggerWrapper;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class ListHandler extends BaseHandler<CallbackContext> {
+public class ListHandler extends BaseHandlerStd {
 
-    @Override
-    public ProgressEvent<ResourceModel, CallbackContext> handleRequest(
-        final AmazonWebServicesClientProxy proxy,
-        final ResourceHandlerRequest<ResourceModel> request,
-        final CallbackContext callbackContext,
-        final Logger logger) {
+    private OrgsLoggerWrapper log;
+
+    protected ProgressEvent<ResourceModel, CallbackContext> handleRequest(
+            final AmazonWebServicesClientProxy awsClientProxy,
+            final ResourceHandlerRequest<ResourceModel> request,
+            final CallbackContext callbackContext,
+            final ProxyClient<OrganizationsClient> orgsClient,
+            final OrgsLoggerWrapper logger) {
+
+        this.log = logger;
+        logger.log(String.format("Entered %s list handler with account Id [%s].", ResourceModel.TYPE_NAME, request.getAwsAccountId()));
+
+        final ResourceModel model = request.getDesiredResourceState();
+        if (model == null) {
+            return ProgressEvent.failed(ResourceModel.builder().build(), callbackContext, HandlerErrorCode.InvalidRequest,
+                    "Organization cannot be empty!");
+        }
 
         final List<ResourceModel> models = new ArrayList<>();
-
-        // STEP 1 [TODO: construct a body of a request]
-        final AwsRequest awsRequest = Translator.translateToListRequest(request.getNextToken());
-
-        // STEP 2 [TODO: make an api call]
-        AwsResponse awsResponse = null; // proxy.injectCredentialsAndInvokeV2(awsRequest, ClientBuilder.getClient()::describeLogGroups);
-
-        // STEP 3 [TODO: get a token for the next page]
         String nextToken = null;
 
-        // STEP 4 [TODO: construct resource models]
-        // e.g. https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-logs/blob/master/aws-logs-loggroup/src/main/java/software/amazon/logs/loggroup/ListHandler.java#L19-L21
+        return awsClientProxy.initiate("AWS-Organizations-Organization::Read::ListOrganization", orgsClient, model, callbackContext)
+                .translateToServiceRequest(t -> Translator.translateToReadRequest())
+                .makeServiceCall(this::describeOrganization)
+                .handleError((organizationsRequest, e, proxyClient1, model1, context) -> {
+                    if (e instanceof AwsOrganizationsNotInUseException) {
+                        return ProgressEvent.<ResourceModel, CallbackContext>builder()
+                                .resourceModels(models)
+                                .nextToken(nextToken)
+                                .status(OperationStatus.FAILED)
+                                .errorCode(HandlerErrorCode.NotFound)
+                                .build();
+                    } else {
+                        return handleErrorInGeneral(organizationsRequest, e, request, orgsClient, model1, context, logger, OrganizationConstants.Action.DESCRIBE_ORG, OrganizationConstants.Handler.LIST);
+                    }
 
-        return ProgressEvent.<ResourceModel, CallbackContext>builder()
-            .resourceModels(models)
-            .nextToken(nextToken)
-            .status(OperationStatus.SUCCESS)
-            .build();
+                })
+                .done(describeOrganizationResponse -> ProgressEvent.<ResourceModel, CallbackContext>builder()
+                        .resourceModels(Translator.translatetoListReadResponse(describeOrganizationResponse, model, models))
+                        .nextToken(nextToken)
+                        .status(OperationStatus.SUCCESS)
+                        .build());
+    }
+
+    protected DescribeOrganizationResponse describeOrganization(final DescribeOrganizationRequest describeOrganizationRequest, final ProxyClient<OrganizationsClient> orgsClient) {
+        log.log(String.format("Retrieving organization details."));
+        final DescribeOrganizationResponse response = orgsClient.injectCredentialsAndInvokeV2(describeOrganizationRequest, orgsClient.client()::describeOrganization);
+        return response;
     }
 }
+

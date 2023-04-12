@@ -1,67 +1,62 @@
 package software.amazon.organizations.organization;
 
-// TODO: replace all usage of SdkClient with your service client type, e.g; YourServiceAsyncClient
-// import software.amazon.awssdk.services.yourservice.YourServiceAsyncClient;
-
-import software.amazon.awssdk.awscore.AwsResponse;
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
-import software.amazon.awssdk.core.SdkClient;
-import software.amazon.cloudformation.exceptions.CfnGeneralServiceException;
+import software.amazon.awssdk.services.organizations.OrganizationsClient;
+import software.amazon.awssdk.services.organizations.model.Root;
+import software.amazon.awssdk.services.organizations.model.DescribeOrganizationRequest;
+import software.amazon.awssdk.services.organizations.model.DescribeOrganizationResponse;
+import software.amazon.awssdk.services.organizations.model.ListRootsRequest;
+import software.amazon.awssdk.services.organizations.model.ListRootsResponse;
 import software.amazon.cloudformation.proxy.AmazonWebServicesClientProxy;
-import software.amazon.cloudformation.proxy.Logger;
 import software.amazon.cloudformation.proxy.ProgressEvent;
 import software.amazon.cloudformation.proxy.ProxyClient;
 import software.amazon.cloudformation.proxy.ResourceHandlerRequest;
+import software.amazon.organizations.utils.OrgsLoggerWrapper;
+
+import java.util.stream.Collectors;
 
 public class ReadHandler extends BaseHandlerStd {
-    private Logger logger;
+    private OrgsLoggerWrapper log;
 
     protected ProgressEvent<ResourceModel, CallbackContext> handleRequest(
-        final AmazonWebServicesClientProxy proxy,
-        final ResourceHandlerRequest<ResourceModel> request,
-        final CallbackContext callbackContext,
-        final ProxyClient<SdkClient> proxyClient,
-        final Logger logger) {
+            final AmazonWebServicesClientProxy awsClientProxy,
+            final ResourceHandlerRequest<ResourceModel> request,
+            final CallbackContext callbackContext,
+            final ProxyClient<OrganizationsClient> orgsClient,
+            final OrgsLoggerWrapper logger) {
 
-        this.logger = logger;
+        this.log = logger;
+        logger.log(String.format("Entered %s read handler for Organization resource type with account Id [%s].", ResourceModel.TYPE_NAME, request.getAwsAccountId()));
 
-        // TODO: Adjust Progress Chain according to your implementation
-        // https://github.com/aws-cloudformation/cloudformation-cli-java-plugin/blob/master/src/main/java/software/amazon/cloudformation/proxy/CallChain.java
+        final ResourceModel model = request.getDesiredResourceState();
+        return ProgressEvent.progress(model, callbackContext)
+                .then(progress -> awsClientProxy.initiate("AWS-Organizations-Organization::Read::GetRootId", orgsClient, model, callbackContext)
+                        .translateToServiceRequest(t -> Translator.translateToListRootsRequest())
+                        .makeServiceCall(this::listRoots)
+                        .handleError((organizationsRequest, e, proxyClient1, model1, context) -> handleErrorInGeneral(
+                                organizationsRequest, e, request, proxyClient1, model1, context, logger, OrganizationConstants.Action.GETROOT_ID, OrganizationConstants.Handler.READ))
+                        .done(listRootsResponse -> {
+                            model.setRootId(listRootsResponse.roots().stream().map(Root::id).collect(Collectors.toList()).get(0));
+                            return ProgressEvent.progress(model, callbackContext);
+                        })
+                )
+                .then(progress -> awsClientProxy.initiate("AWS-Organizations-Organization::Read::DescribeOrganization", orgsClient, model, callbackContext)
+                        .translateToServiceRequest(t -> Translator.translateToReadRequest())
+                        .makeServiceCall(this::describeOrganization)
+                        .handleError((organizationsRequest, e, proxyClient1, model1, context) -> handleErrorInGeneral(
+                                organizationsRequest, e, request, proxyClient1, model1, context, logger, OrganizationConstants.Action.DESCRIBE_ORG, OrganizationConstants.Handler.READ))
+                        .done(describeOrganizationResponse -> ProgressEvent.defaultSuccessHandler(Translator.translateFromReadResponse(describeOrganizationResponse, model)))
+                );
+    }
 
-        // STEP 1 [initialize a proxy context]
-        return proxy.initiate("AWS-Organizations-Organization::Read", proxyClient, request.getDesiredResourceState(), callbackContext)
+    protected DescribeOrganizationResponse describeOrganization(final DescribeOrganizationRequest describeOrganizationRequest, final ProxyClient<OrganizationsClient> orgsClient) {
+        log.log(String.format("Retrieving organization details."));
+        final DescribeOrganizationResponse response = orgsClient.injectCredentialsAndInvokeV2(describeOrganizationRequest, orgsClient.client()::describeOrganization);
+        return response;
+    }
 
-            // STEP 2 [TODO: construct a body of a request]
-            .translateToServiceRequest(Translator::translateToReadRequest)
-
-            // STEP 3 [TODO: make an api call]
-            // Implement client invocation of the read request through the proxyClient, which is already initialised with
-            // caller credentials, correct region and retry settings
-            .makeServiceCall((awsRequest, client) -> {
-                AwsResponse awsResponse = null;
-                try {
-
-                    // TODO: add custom read resource logic
-                    // If describe request does not return ResourceNotFoundException, you must throw ResourceNotFoundException based on
-                    // awsResponse values
-
-                } catch (final AwsServiceException e) { // ResourceNotFoundException
-                    /*
-                    * While the handler contract states that the handler must always return a progress event,
-                    * you may throw any instance of BaseHandlerException, as the wrapper map it to a progress event.
-                    * Each BaseHandlerException maps to a specific error code, and you should map service exceptions as closely as possible
-                    * to more specific error codes
-                    */
-                    throw new CfnGeneralServiceException(ResourceModel.TYPE_NAME, e); // e.g. https://github.com/aws-cloudformation/aws-cloudformation-resource-providers-logs/commit/2077c92299aeb9a68ae8f4418b5e932b12a8b186#diff-5761e3a9f732dc1ef84103dc4bc93399R56-R63
-                }
-
-                logger.log(String.format("%s has successfully been read.", ResourceModel.TYPE_NAME));
-                return awsResponse;
-            })
-
-            // STEP 4 [TODO: gather all properties of the resource]
-            // Implement client invocation of the read request through the proxyClient, which is already initialised with
-            // caller credentials, correct region and retry settings
-            .done(awsResponse -> ProgressEvent.defaultSuccessHandler(Translator.translateFromReadResponse(awsResponse)));
+    protected ListRootsResponse listRoots(final ListRootsRequest listRootsRequest, final ProxyClient<OrganizationsClient> orgsClient) {
+        log.log(String.format("Retrieving root id."));
+        final ListRootsResponse response = orgsClient.injectCredentialsAndInvokeV2(listRootsRequest, orgsClient.client()::listRoots);
+        return response;
     }
 }
