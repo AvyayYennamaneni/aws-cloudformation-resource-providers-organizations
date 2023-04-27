@@ -74,11 +74,11 @@
       "permissions": [
         "organizations:DescribeOrganization"
       ]
+    },
+    "update": {
+      "permissions": []
     }
   },
-  "createOnlyProperties": [
-    "/properties/FeatureSet"
-  ],
   "readOnlyProperties": [
     "/properties/Id",
     "/properties/Arn",

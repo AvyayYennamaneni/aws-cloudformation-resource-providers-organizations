@@ -58,7 +58,7 @@ public class UpdateHandlerTest extends AbstractTestBase {
         assertThat(response).isNotNull();
         assertThat(response.getStatus()).isEqualTo(OperationStatus.FAILED);
         assertThat(response.getMessage()).isEqualTo("Update not supported!");
-        assertThat(response.getErrorCode()).isEqualTo(HandlerErrorCode.NotUpdatable);
+        assertThat(response.getErrorCode()).isEqualTo(HandlerErrorCode.InvalidRequest);
     }
 
     @Test

@@ -34,7 +34,8 @@ public class UpdateHandler extends BaseHandlerStd {
             return ProgressEvent.failed(model, callbackContext, HandlerErrorCode.InvalidRequest,
                     "Organization cannot be updated");
         } else {
-            return ProgressEvent.failed(ResourceModel.builder().build(), callbackContext, HandlerErrorCode.NotUpdatable,
+            logger.log("Update operation is not supported");
+            return ProgressEvent.failed(ResourceModel.builder().build(), callbackContext, HandlerErrorCode.InvalidRequest,
                     "Update not supported!");
         }
     }
