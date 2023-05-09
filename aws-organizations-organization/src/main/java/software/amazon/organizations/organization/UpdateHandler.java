@@ -11,6 +11,7 @@ import software.amazon.organizations.utils.OrgsLoggerWrapper;
 
 public class UpdateHandler extends BaseHandlerStd {
     private OrgsLoggerWrapper log;
+    private final String FEATURE_MODE_ALL = "ALL";
 
     protected ProgressEvent<ResourceModel, CallbackContext> handleRequest(
             final AmazonWebServicesClientProxy awsClientProxy,
@@ -24,19 +25,19 @@ public class UpdateHandler extends BaseHandlerStd {
 
         final ResourceModel previousModel = request.getPreviousResourceState();
         final ResourceModel model = request.getDesiredResourceState();
-
-        if (previousModel == null) {
-            logger.log("Previous Organization information is empty, cannot update");
-            return ProgressEvent.failed(model, callbackContext, HandlerErrorCode.NotFound,
-                    "Organization cannot be updated as no previous Organization exists");
-        } else if (model == null) {
-            logger.log("Organization cannot be updated as organization is empty");
-            return ProgressEvent.failed(model, callbackContext, HandlerErrorCode.InvalidRequest,
-                    "Organization cannot be updated");
-        } else {
-            logger.log("Update operation is not supported");
-            return ProgressEvent.failed(ResourceModel.builder().build(), callbackContext, HandlerErrorCode.InvalidRequest,
-                    "Update not supported!");
+        // default feature set if not provided is ALL
+        if (previousModel.getFeatureSet() == null) {
+            previousModel.setFeatureSet(FEATURE_MODE_ALL);
         }
+        if (model.getFeatureSet() == null) {
+            model.setFeatureSet(FEATURE_MODE_ALL);
+        }
+
+        if (!model.getFeatureSet().equals(previousModel.getFeatureSet())) {
+            String errorMsg = "Update between ALL and CONSOLIDATED_BILLING feature set mode is not supported.";
+            logger.log(errorMsg);
+            return ProgressEvent.failed(ResourceModel.builder().build(), callbackContext, HandlerErrorCode.InvalidRequest, errorMsg);
+        }
+        return ProgressEvent.defaultSuccessHandler(model);
     }
 }

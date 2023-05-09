@@ -43,58 +43,41 @@ public class UpdateHandlerTest extends AbstractTestBase {
     }
 
     @Test
-    protected void handleRequest_shouldReturnFailed_withUpdateNotSupported() {
+    protected void handleRequest_updateFeatureSet_shouldReturnFailed_withUpdateNotSupported() {
 
         final ResourceModel model = ResourceModel.builder()
-                .featureSet(TEST_FEATURE_SET)
+                .featureSet(CONSOLIDATED_BILLING)
                 .build();
+        final ResourceModel previousModel = ResourceModel.builder()
+                                        .featureSet(TEST_FEATURE_SET)
+                                        .build();
 
         final ResourceHandlerRequest<ResourceModel> request = ResourceHandlerRequest.<ResourceModel>builder()
                 .desiredResourceState(model)
-                .previousResourceState(model)
+                .previousResourceState(previousModel)
                 .build();
 
         final ProgressEvent<ResourceModel, CallbackContext> response = updateHandler.handleRequest(mockAwsClientProxy, request, new CallbackContext(), mockProxyClient, logger);
         assertThat(response).isNotNull();
         assertThat(response.getStatus()).isEqualTo(OperationStatus.FAILED);
-        assertThat(response.getMessage()).isEqualTo("Update not supported!");
         assertThat(response.getErrorCode()).isEqualTo(HandlerErrorCode.InvalidRequest);
     }
 
     @Test
-    protected void handleRequest_shouldReturnFailed_withOrganizationNotFound() {
+    protected void handleRequest_shouldReturnSuccess() {
 
         final ResourceModel model = ResourceModel.builder()
                 .featureSet(TEST_FEATURE_SET)
                 .build();
+        final ResourceModel previousModel = ResourceModel.builder().build();
 
         final ResourceHandlerRequest<ResourceModel> request = ResourceHandlerRequest.<ResourceModel>builder()
+                .previousResourceState(previousModel)
                 .desiredResourceState(model)
                 .build();
 
         final ProgressEvent<ResourceModel, CallbackContext> response = updateHandler.handleRequest(mockAwsClientProxy, request, new CallbackContext(), mockProxyClient, logger);
         assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(OperationStatus.FAILED);
-        assertThat(response.getMessage()).isEqualTo("Organization cannot be updated as no previous Organization exists");
-        assertThat(response.getErrorCode()).isEqualTo(HandlerErrorCode.NotFound);
-    }
-
-    @Test
-    protected void handleRequest_shouldReturnFailed_withInvalidRequest() {
-
-        final ResourceModel model = ResourceModel.builder()
-                .featureSet(TEST_FEATURE_SET)
-                .build();
-
-        final ResourceHandlerRequest<ResourceModel> request = ResourceHandlerRequest.<ResourceModel>builder()
-                .previousResourceState(model)
-                .desiredResourceState(null)
-                .build();
-
-        final ProgressEvent<ResourceModel, CallbackContext> response = updateHandler.handleRequest(mockAwsClientProxy, request, new CallbackContext(), mockProxyClient, logger);
-        assertThat(response).isNotNull();
-        assertThat(response.getStatus()).isEqualTo(OperationStatus.FAILED);
-        assertThat(response.getMessage()).isEqualTo("Organization cannot be updated");
-        assertThat(response.getErrorCode()).isEqualTo(HandlerErrorCode.InvalidRequest);
+        assertThat(response.getStatus()).isEqualTo(OperationStatus.SUCCESS);
     }
 }

@@ -26,6 +26,7 @@ public class AbstractTestBase {
     protected static final String TEST_ROOT_ID = "r-12345";
     protected static final String ORGANIZATION_JSON_SCHEMA_FILE_NAME = "aws-organizations-organization.json";
     protected static final String ORGANIZATION_SCHEMA_SHA256_HEXSTRING = "7B5FCE7CF69C8BFE812BEB41F19FC8132E2C9A226AAEDA1C7C065B2C1F01CDF3";
+    protected static final String CONSOLIDATED_BILLING = "CONSOLIDATED_BILLING";
     protected static final Credentials MOCK_CREDENTIALS;
     protected static final LoggerProxy loggerProxy;
     protected static final OrgsLoggerWrapper logger;
