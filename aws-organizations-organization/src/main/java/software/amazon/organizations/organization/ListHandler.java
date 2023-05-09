@@ -43,16 +43,16 @@ public class ListHandler extends BaseHandlerStd {
                 .makeServiceCall(this::describeOrganization)
                 .handleError((organizationsRequest, e, proxyClient1, model1, context) -> {
                     if (e instanceof AwsOrganizationsNotInUseException) {
+                        logger.log(String.format("Caught AwsOrganizationsNotInUseException for accountId [%s], continue to return model with null objects.", request.getAwsAccountId()));
+
                         return ProgressEvent.<ResourceModel, CallbackContext>builder()
                                 .resourceModels(models)
                                 .nextToken(nextToken)
-                                .status(OperationStatus.FAILED)
-                                .errorCode(HandlerErrorCode.NotFound)
+                                .status(OperationStatus.SUCCESS)
                                 .build();
                     } else {
                         return handleErrorInGeneral(organizationsRequest, e, request, orgsClient, model1, context, logger, OrganizationConstants.Action.DESCRIBE_ORG, OrganizationConstants.Handler.LIST);
                     }
-
                 })
                 .done(describeOrganizationResponse -> ProgressEvent.<ResourceModel, CallbackContext>builder()
                         .resourceModels(Translator.translatetoListReadResponse(describeOrganizationResponse, model, models))
