@@ -1,6 +1,6 @@
 # AWS::Organizations::Organization
 
-Resource schema for AWS::Organizations::Organization
+You can use AWS::Organizations::Organization to Creates an AWS organization, the account whose user is calling the CreateOrganization operation automatically becomes the management account of the new organization.
 
 ## Syntax
 
@@ -74,4 +74,3 @@ The email address that is associated with the AWS account that is designated as 
 #### RootId
 
 The unique identifier (ID) for the root.
-
