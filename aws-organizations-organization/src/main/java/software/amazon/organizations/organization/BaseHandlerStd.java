@@ -7,6 +7,7 @@ import software.amazon.awssdk.services.organizations.model.AccessDeniedForDepend
 import software.amazon.awssdk.services.organizations.model.ConcurrentModificationException;
 import software.amazon.awssdk.services.organizations.model.ConstraintViolationException;
 import software.amazon.awssdk.services.organizations.model.InvalidInputException;
+import software.amazon.awssdk.services.organizations.model.OrganizationNotEmptyException;
 import software.amazon.awssdk.services.organizations.model.ServiceException;
 import software.amazon.awssdk.services.organizations.model.TooManyRequestsException;
 import software.amazon.awssdk.services.organizations.model.AlreadyInOrganizationException;
@@ -84,7 +85,7 @@ public abstract class BaseHandlerStd extends BaseHandler<CallbackContext> {
             errorCode = HandlerErrorCode.ResourceConflict;
         } else if (e instanceof ConstraintViolationException) {
             errorCode = HandlerErrorCode.ServiceLimitExceeded;
-        } else if (e instanceof InvalidInputException) {
+        } else if (e instanceof InvalidInputException || e instanceof OrganizationNotEmptyException) {
             errorCode = HandlerErrorCode.InvalidRequest;
         } else if (e instanceof ServiceException) {
             errorCode = HandlerErrorCode.ServiceInternalError;
