@@ -52,4 +52,3 @@ public class OrganizationSchemaFileCheckSumChangesTest extends AbstractTestBase 
         assertThat(actualHexString).isEqualTo(ORGANIZATION_SCHEMA_SHA256_HEXSTRING);
     }
 }
-
